@@ -1,9 +1,8 @@
-"use client";
 import { PromptCard } from "./PromptCard";
 import { Badge } from "./ui/badge";
 import { useState } from "react";
 
-const promptData = [
+const initialPromptData = [
   {
     id: 1,
     title: "Email Subject Line Generator",
@@ -89,8 +88,56 @@ const promptData = [
 
 const categories = ["All", "Marketing", "Coding", "Writing", "Business", "Design"];
 
-export function PromptGrid() {
+interface PromptGridProps {
+  onAddPrompt?: (prompt: {
+    title: string;
+    prompt: string;
+    useCase: string;
+    category: string;
+    tags: string[];
+  }) => void;
+}
+
+export function PromptGrid({ onAddPrompt }: PromptGridProps) {
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [promptData, setPromptData] = useState(initialPromptData);
+
+  const handleAddPrompt = (newPrompt: {
+    title: string;
+    prompt: string;
+    useCase: string;
+    category: string;
+    tags: string[];
+  }) => {
+    const prompt = {
+      id: Math.max(...promptData.map(p => p.id)) + 1,
+      ...newPrompt,
+      dateAdded: new Date().toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric' 
+      }),
+      isFavorite: false,
+      featured: false
+    };
+    
+    setPromptData([prompt, ...promptData]);
+    
+    // Call parent callback if provided
+    if (onAddPrompt) {
+      onAddPrompt(newPrompt);
+    }
+  };
+
+  const handleToggleFavorite = (id: number, isFavorite: boolean) => {
+    setPromptData(prevData => 
+      prevData.map(prompt => 
+        prompt.id === id 
+          ? { ...prompt, isFavorite } 
+          : prompt
+      )
+    );
+  };
 
   const filteredPrompts = selectedCategory === "All" 
     ? promptData 
@@ -116,9 +163,10 @@ export function PromptGrid() {
       
       {/* Prompts Grid */}
       <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {filteredPrompts.map((prompt, index) => (
+        {filteredPrompts.map((prompt) => (
           <PromptCard
             key={prompt.id}
+            id={prompt.id}
             title={prompt.title}
             prompt={prompt.prompt}
             useCase={prompt.useCase}
@@ -127,6 +175,7 @@ export function PromptGrid() {
             dateAdded={prompt.dateAdded}
             isFavorite={prompt.isFavorite}
             featured={false}
+            onToggleFavorite={handleToggleFavorite}
           />
         ))}
       </div>
@@ -139,3 +188,6 @@ export function PromptGrid() {
     </section>
   );
 }
+
+// Export the handler for use in parent components
+export { initialPromptData };
