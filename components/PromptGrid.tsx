@@ -1,147 +1,172 @@
 import { PromptCard } from "./PromptCard";
+import { AddPromptDialog } from "./AddPromptDialog";
 import { Badge } from "./ui/badge";
-import { useState } from "react";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { useState, useEffect } from "react";
+import { getPrompts, toggleFavorite, listenForPromptUpdates, SanityPrompt } from "@/sanity/lib/queries";
+import { toast } from "sonner";
+import { Plus } from "lucide-react";
 
-const initialPromptData = [
-  {
-    id: 1,
-    title: "Email Subject Line Generator",
-    prompt: "Create 5 compelling email subject lines for [product/service] that increase open rates. The email is about [specific topic/offer]. Target audience: [describe audience]. Tone should be [professional/casual/urgent]. Include power words and avoid spam triggers.",
-    useCase: "Perfect for email marketers who need to create high-converting subject lines that stand out in crowded inboxes.",
-    category: "Marketing",
-    tags: ["email", "copywriting", "conversion"],
-    dateAdded: "Mar 15, 2024",
-    isFavorite: true,
-    featured: true
-  },
-  {
-    id: 2,
-    title: "Code Review Assistant",
-    prompt: "Review this code for potential issues, bugs, and improvements. Focus on: 1) Security vulnerabilities 2) Performance optimizations 3) Code readability 4) Best practices 5) Potential edge cases. Provide specific suggestions with examples: [paste your code here]",
-    useCase: "Ideal for developers who want thorough code reviews to improve code quality and catch bugs early.",
-    category: "Coding",
-    tags: ["code-review", "debugging", "optimization"],
-    dateAdded: "Mar 12, 2024",
-    isFavorite: false
-  },
-  {
-    id: 3,
-    title: "Creative Story Starter",
-    prompt: "Generate a unique story beginning with these elements: Genre: [specify genre], Main character: [brief description], Setting: [time/place], Central conflict: [describe challenge]. Include an intriguing opening line and establish the mood.",
-    useCase: "Great for writers experiencing creative block who need inspiration and a strong foundation for their stories.",
-    category: "Writing",
-    tags: ["creative-writing", "storytelling", "inspiration"],
-    dateAdded: "Mar 10, 2024",
-    isFavorite: true
-  },
-  {
-    id: 4,
-    title: "Business Strategy Framework",
-    prompt: "Help me develop a strategic plan for [business challenge/opportunity]. Analyze: 1) Current situation 2) Market conditions 3) Competitive landscape 4) Resource requirements 5) Risk assessment. Provide actionable recommendations with timeline.",
-    useCase: "Essential for entrepreneurs and business leaders who need structured approach to strategic planning.",
-    category: "Business",
-    tags: ["strategy", "planning", "analysis"],
-    dateAdded: "Mar 8, 2024",
-    isFavorite: false
-  },
-  {
-    id: 5,
-    title: "UI/UX Design Critique",
-    prompt: "Analyze this design for user experience and interface effectiveness. Evaluate: 1) Visual hierarchy 2) User flow 3) Accessibility 4) Mobile responsiveness 5) Brand consistency. Suggest specific improvements: [describe or attach design]",
-    useCase: "Valuable for designers seeking objective feedback on their work to improve usability and aesthetic appeal.",
-    category: "Design",
-    tags: ["ui-ux", "feedback", "usability"],
-    dateAdded: "Mar 6, 2024",
-    isFavorite: false
-  },
-  {
-    id: 6,
-    title: "Social Media Content Planner",
-    prompt: "Create a week's worth of social media content for [brand/business]. Platform: [Instagram/LinkedIn/Twitter]. Target audience: [describe]. Goals: [brand awareness/engagement/sales]. Include post captions, hashtags, and posting times.",
-    useCase: "Perfect for social media managers and small business owners who need consistent, engaging content.",
-    category: "Marketing",
-    tags: ["social-media", "content-planning", "engagement"],
-    dateAdded: "Mar 4, 2024",
-    isFavorite: true
-  },
-  {
-    id: 7,
-    title: "Meeting Notes Summarizer",
-    prompt: "Summarize these meeting notes into key points, action items, and decisions made. Format: 1) Main topics discussed 2) Key decisions 3) Action items with owners 4) Next steps. Make it concise and actionable: [paste meeting notes]",
-    useCase: "Saves time for busy professionals who need to quickly distill meeting content into actionable insights.",
-    category: "Business",
-    tags: ["meetings", "productivity", "organization"],
-    dateAdded: "Mar 2, 2024",
-    isFavorite: false
-  },
-  {
-    id: 8,
-    title: "Bug Report Generator",
-    prompt: "Create a detailed bug report for this issue. Include: 1) Steps to reproduce 2) Expected vs actual behavior 3) Environment details 4) Severity level 5) Potential impact. Issue description: [describe the bug you encountered]",
-    useCase: "Helps developers and QA testers create comprehensive bug reports that lead to faster resolution.",
-    category: "Coding",
-    tags: ["bug-reporting", "qa", "testing"],
-    dateAdded: "Feb 28, 2024",
-    isFavorite: true
-  }
-];
+// Use the SanityPrompt type from our queries
+type Prompt = SanityPrompt;
 
-const categories = ["All", "Marketing", "Coding", "Writing", "Business", "Design"];
+// Define categories for filtering
+const categories = ["All", "Marketing", "Coding", "Writing", "Business", "Design"] as const;
+type Category = typeof categories[number];
 
-interface PromptGridProps {
-  onAddPrompt?: (prompt: {
-    title: string;
-    prompt: string;
-    useCase: string;
-    category: string;
-    tags: string[];
-  }) => void;
-}
+export default function PromptGrid() {
+  const [selectedCategory, setSelectedCategory] = useState<Category>("All");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [prompts, setPrompts] = useState<Prompt[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
 
-export function PromptGrid({ onAddPrompt }: PromptGridProps) {
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [promptData, setPromptData] = useState(initialPromptData);
+  // Format date helper function
+  const formatPromptDate = (prompt: SanityPrompt): SanityPrompt => ({
+    ...prompt,
+    dateAdded: new Date(prompt.dateAdded).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  });
 
-  const handleAddPrompt = (newPrompt: {
-    title: string;
-    prompt: string;
-    useCase: string;
-    category: string;
-    tags: string[];
-  }) => {
-    const prompt = {
-      id: Math.max(...promptData.map(p => p.id)) + 1,
-      ...newPrompt,
-      dateAdded: new Date().toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric', 
-        year: 'numeric' 
-      }),
-      isFavorite: false,
-      featured: false
+  // Fetch prompts from Sanity with real-time updates
+  useEffect(() => {
+    let isMounted = true;
+    let unsubscribe: (() => void) | null = null;
+    
+    const setupPrompts = async () => {
+      try {
+        // Initial fetch
+        const data = await getPrompts();
+        if (!isMounted) return;
+        
+        setPrompts(data.map(formatPromptDate));
+        
+        // Set up real-time listener
+        unsubscribe = listenForPromptUpdates((update) => {
+          if (!update.result) return;
+          
+          const { result } = update;
+          setPrompts(currentPrompts => {
+            const updatedPrompts = [...currentPrompts];
+            const index = updatedPrompts.findIndex(p => p._id === update.documentId);
+            
+            if (index !== -1) {
+              // Update existing prompt
+              updatedPrompts[index] = formatPromptDate({
+                ...updatedPrompts[index],
+                ...result
+              });
+            } else if (update.type === 'mutation' && result._id) {
+              // Only add new prompt if it's an update from a mutation (not our own optimistic update)
+              // and it's not already in the list (shouldn't be, but just in case)
+              const promptExists = updatedPrompts.some(p => p._id === result._id);
+              if (!promptExists) {
+                updatedPrompts.unshift(formatPromptDate(result));
+              }
+            }
+            
+            return updatedPrompts;
+          });
+        });
+        
+        setError(null);
+      } catch (err) {
+        console.error('Error setting up real-time updates:', err);
+        setError('Failed to set up real-time updates. Some features may not work.');
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
     };
-    
-    setPromptData([prompt, ...promptData]);
-    
-    // Call parent callback if provided
-    if (onAddPrompt) {
-      onAddPrompt(newPrompt);
+
+    setupPrompts();
+
+    // Cleanup function
+    return () => {
+      isMounted = false;
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, []);
+
+  // Filter prompts based on selected category and search query
+  const filteredPrompts = prompts.filter((prompt) => {
+    const matchesCategory = selectedCategory === "All" || prompt.category === selectedCategory;
+    const matchesSearch = prompt.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         prompt.prompt.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         prompt.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+    return matchesCategory && matchesSearch;
+  });
+
+  const handleCategoryChange = (category: Category) => {
+    setSelectedCategory(category);
+  };
+
+  const handlePromptAdded = (newPrompt: Prompt) => {
+    // Add the new prompt to the beginning of the list
+    setPrompts(prevPrompts => [formatPromptDate(newPrompt), ...prevPrompts]);
+  };
+
+  const handleToggleFavorite = async (id: string) => {
+    try {
+      // Find the current prompt to get the current favorite status
+      const currentPrompt = prompts.find(p => p._id === id);
+      if (!currentPrompt) {
+        console.error('Prompt not found with ID:', id);
+        return;
+      }
+      
+      const newFavoriteStatus = !currentPrompt.isFavorite;
+      
+      // Optimistic update
+      setPrompts(prevPrompts =>
+        prevPrompts.map(prompt =>
+          prompt._id === id ? { ...prompt, isFavorite: newFavoriteStatus } : prompt
+        )
+      );
+
+      // Update in Sanity
+      await toggleFavorite(id, newFavoriteStatus);
+      
+      toast.success(`Prompt ${newFavoriteStatus ? 'added to' : 'removed from'} favorites`);
+    } catch (error) {
+      console.error('Failed to update favorite status:', error);
+      
+      // Revert on error
+      setPrompts(prevPrompts =>
+        prevPrompts.map(prompt =>
+          prompt._id === id ? { ...prompt, isFavorite: !prompt.isFavorite } : prompt
+        )
+      );
+      
+      // Show error toast with more details
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to update favorite: ${errorMessage}`);
     }
   };
 
-  const handleToggleFavorite = (id: number, isFavorite: boolean) => {
-    setPromptData(prevData => 
-      prevData.map(prompt => 
-        prompt.id === id 
-          ? { ...prompt, isFavorite } 
-          : prompt
-      )
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[200px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
     );
-  };
+  }
 
-  const filteredPrompts = selectedCategory === "All" 
-    ? promptData 
-    : promptData.filter(prompt => prompt.category === selectedCategory);
+  if (error) {
+    return (
+      <div className="text-center py-8 text-red-500">
+        {error}
+      </div>
+    );
+  }
 
   return (
     <section className="max-w-5xl mx-auto px-4 py-6">
@@ -149,11 +174,11 @@ export function PromptGrid({ onAddPrompt }: PromptGridProps) {
       <div className="mb-6">
         <div className="flex gap-2 flex-wrap">
           {categories.map((category) => (
-            <Badge 
-              key={category} 
-              variant={category === selectedCategory ? "default" : "secondary"}
-              className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
-              onClick={() => setSelectedCategory(category)}
+            <Badge
+              key={category}
+              variant={selectedCategory === category ? "default" : "outline"}
+              className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+              onClick={() => handleCategoryChange(category as Category)}
             >
               {category}
             </Badge>
@@ -161,12 +186,27 @@ export function PromptGrid({ onAddPrompt }: PromptGridProps) {
         </div>
       </div>
       
+      {/* Search Input */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h2 className="text-2xl font-bold">Prompts</h2>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+          <Input
+            type="search"
+            placeholder="Search prompts..."
+            className="w-full sm:w-[200px] lg:w-[300px]"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <AddPromptDialog onPromptAdded={handlePromptAdded} />
+        </div>
+      </div>
+      
       {/* Prompts Grid */}
       <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
         {filteredPrompts.map((prompt) => (
           <PromptCard
-            key={prompt.id}
-            id={prompt.id}
+            key={prompt._id}
+            id={prompt._id}
             title={prompt.title}
             prompt={prompt.prompt}
             useCase={prompt.useCase}
@@ -174,7 +214,7 @@ export function PromptGrid({ onAddPrompt }: PromptGridProps) {
             tags={prompt.tags}
             dateAdded={prompt.dateAdded}
             isFavorite={prompt.isFavorite}
-            featured={false}
+            featured={prompt.featured || false}
             onToggleFavorite={handleToggleFavorite}
           />
         ))}
@@ -182,12 +222,9 @@ export function PromptGrid({ onAddPrompt }: PromptGridProps) {
       
       {filteredPrompts.length === 0 && (
         <div className="text-center py-12 text-muted-foreground">
-          No prompts found in this category.
+          No prompts found matching your search criteria.
         </div>
       )}
     </section>
   );
 }
-
-// Export the handler for use in parent components
-export { initialPromptData };

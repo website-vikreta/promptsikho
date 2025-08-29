@@ -1,7 +1,7 @@
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Copy, Heart, BookOpen } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { PromptDetailDialog } from "./PromptDetailDialog";
 
@@ -14,8 +14,8 @@ interface PromptCardProps {
   dateAdded: string;
   isFavorite?: boolean;
   featured?: boolean;
-  id?: number;
-  onToggleFavorite?: (id: number, isFavorite: boolean) => void;
+  id?: string;
+  onToggleFavorite?: (id: string) => void;
 }
 
 export function PromptCard({ 
@@ -30,7 +30,7 @@ export function PromptCard({
   id,
   onToggleFavorite
 }: PromptCardProps) {
-  const [favorite, setFavorite] = useState(isFavorite);
+  const [isPending, setIsPending] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
 
   const handleCopy = (e: React.MouseEvent) => {
@@ -41,24 +41,32 @@ export function PromptCard({
     });
   };
 
-  const toggleFavorite = (e: React.MouseEvent) => {
+  const toggleFavorite = async (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent triggering the card click
-    const newFavoriteState = !favorite;
-    setFavorite(newFavoriteState);
-    if (id && onToggleFavorite) {
-      onToggleFavorite(id, newFavoriteState);
-    }
+    e.preventDefault(); // Prevent any default behavior
     
-    toast.success(
-      newFavoriteState ? "Added to favorites!" : "Removed from favorites!",
-      { duration: 2000 }
-    );
+    if (isPending || !id || !onToggleFavorite) return;
+    
+    setIsPending(true);
+    
+    try {
+      await onToggleFavorite(id);
+    } catch (error) {
+      console.error('Error in toggleFavorite:', error);
+      toast.error('Failed to update favorite status');
+    } finally {
+      setIsPending(false);
+    }
   };
 
-  const handleFavoriteFromDialog = (promptId: number, isFav: boolean) => {
-    setFavorite(isFav);
-    if (onToggleFavorite) {
-      onToggleFavorite(promptId, isFav);
+  const handleFavoriteFromDialog = async (promptId: string) => {
+    if (isPending || !onToggleFavorite) return;
+    
+    try {
+      await onToggleFavorite(promptId);
+    } catch (error) {
+      console.error('Error in handleFavoriteFromDialog:', error);
+      toast.error('Failed to update favorite status');
     }
   };
 
@@ -84,10 +92,16 @@ export function PromptCard({
               <Button 
                 variant="ghost" 
                 size="sm"
-                className={`h-8 w-8 p-0 ${favorite ? 'text-red-500' : ''}`}
+                className={`h-8 w-8 p-0 hover:bg-transparent ${isFavorite ? 'text-red-500 hover:text-red-600' : 'text-muted-foreground hover:text-foreground'} ${isPending ? 'opacity-50' : ''}`}
                 onClick={toggleFavorite}
+                onMouseDown={e => e.stopPropagation()} // Prevent focus from triggering card click
+                disabled={isPending}
+                aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
               >
-                <Heart className={`w-4 h-4 ${favorite ? 'fill-current' : ''}`} />
+                <Heart 
+                  className={`w-4 h-4 transition-colors ${isFavorite ? 'fill-current' : ''}`} 
+                  fill={isFavorite ? 'currentColor' : 'none'}
+                />
               </Button>
               <Button 
                 variant="ghost" 
@@ -145,9 +159,9 @@ export function PromptCard({
         category={category}
         tags={tags}
         dateAdded={dateAdded}
-        isFavorite={favorite}
+        isFavorite={isFavorite}
         id={id}
-        onToggleFavorite={handleFavoriteFromDialog}
+        onToggleFavorite={id ? () => handleFavoriteFromDialog(id) : undefined}
       />
     </>
   );

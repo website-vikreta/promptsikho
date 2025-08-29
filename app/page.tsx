@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Header } from "@/components/Header";
-import { PromptGrid } from "@/components/PromptGrid";
+import PromptGrid from "@/components/PromptGrid";
 
 export default function App() {
   const [refreshKey, setRefreshKey] = useState(0);

@@ -16,8 +16,8 @@ interface PromptDetailDialogProps {
   tags: string[];
   dateAdded: string;
   isFavorite?: boolean;
-  id?: number;
-  onToggleFavorite?: (id: number, isFavorite: boolean) => void;
+  id?: string;
+  onToggleFavorite?: (id: string) => void;
 }
 
 export function PromptDetailDialog({
@@ -47,17 +47,22 @@ export function PromptDetailDialog({
     });
   };
 
-  const toggleFavorite = () => {
-    const newFavoriteState = !favorite;
-    setFavorite(newFavoriteState);
-    if (id && onToggleFavorite) {
-      onToggleFavorite(id, newFavoriteState);
-    }
+  const toggleFavorite = async (e?: React.MouseEvent) => {
+    e?.stopPropagation();
     
-    toast.success(
-      newFavoriteState ? "Added to favorites!" : "Removed from favorites!",
-      { duration: 2000 }
-    );
+    if (!id || !onToggleFavorite) return;
+    
+    // Optimistic update
+    setFavorite(!favorite);
+    
+    try {
+      await onToggleFavorite(id);
+    } catch (error) {
+      // Revert on error
+      setFavorite(!favorite);
+      console.error('Error toggling favorite:', error);
+      toast.error('Failed to update favorite status');
+    }
   };
 
   // Calculate metadata
@@ -87,7 +92,11 @@ export function PromptDetailDialog({
                 variant="outline" 
                 size="sm"
                 className={`flex items-center gap-2 ${favorite ? 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100' : ''}`}
-                onClick={toggleFavorite}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleFavorite(e);
+                }}
+                onMouseDown={e => e.stopPropagation()}
               >
                 <Heart className={`w-4 h-4 ${favorite ? 'fill-current' : ''}`} />
                 {favorite ? 'Remove from Favorites' : 'Add to Favorites'}

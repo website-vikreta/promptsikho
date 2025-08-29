@@ -1,22 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PromptSikho - AI Prompt Management System
+
+A Next.js application for managing and sharing AI prompts with Sanity.io as the backend.
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 14.6.0 or later
+- npm or yarn
+- Sanity.io account and project
+
+### Environment Setup
+
+1. Create a `.env.local` file in the root directory
+2. Add the following environment variables:
+
+```bash
+# Sanity Configuration
+NEXT_PUBLIC_SANITY_PROJECT_ID=your_project_id
+NEXT_PUBLIC_SANITY_DATASET=production
+NEXT_PUBLIC_SANITY_API_VERSION=2023-05-03
+NEXT_PUBLIC_SANITY_API_TOKEN=your_sanity_api_token_with_write_permissions
+```
+
+### Install Dependencies
+
+```bash
+npm install
+# or
+yarn install
+```
+
+### Run the Development Server
 
 ```bash
 npm run dev
 # or
 yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Sanity Studio
+
+To run the Sanity Studio locally:
+
+```bash
+cd sanity
+npm install
+npm run dev
+```
+
+Open [http://localhost:3333](http://localhost:3333) to access the Sanity Studio.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
