@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Enable SWC minification for better performance
+  swcMinify: true,
 };
 
 export default nextConfig;
