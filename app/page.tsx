@@ -4,24 +4,29 @@ import { Header } from "@/components/Header";
 import PromptGrid from "@/components/PromptGrid";
 
 export default function App() {
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const handleAddPrompt = (prompt: {
-    title: string;
-    prompt: string;
-    useCase: string;
-    category: string;
-    tags: string[];
-  }) => {
-    // Force re-render by updating key
-    setRefreshKey(prev => prev + 1);
+  const handlePromptAdded = () => {
+    // The actual refresh is now handled in the PromptGrid component
+  };
+
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
   };
 
   return (
     <div className="min-h-screen bg-background">
-      <Header onAddPrompt={handleAddPrompt} />
-      <main>
-        <PromptGrid key={refreshKey} onAddPrompt={handleAddPrompt} />
+      <Header 
+        searchQuery={searchQuery}
+        onSearchChange={handleSearchChange}
+        onPromptAdded={handlePromptAdded}
+      />
+      <main className="pt-4">
+        <PromptGrid 
+          searchQuery={searchQuery}
+          onSearchChange={handleSearchChange}
+          onPromptAdded={handlePromptAdded}
+        />
       </main>
     </div>
   );

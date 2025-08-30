@@ -138,9 +138,9 @@ export function AddPromptDialog({ onPromptAdded }: AddPromptDialogProps) {
       }
     }}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline">
+        <Button size="sm">
           <Plus className="w-4 h-4 mr-1" />
-          Add
+          <span>New Prompt</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">

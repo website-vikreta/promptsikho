@@ -1,12 +1,8 @@
 import { PromptCard } from "./PromptCard";
-import { AddPromptDialog } from "./AddPromptDialog";
 import { Badge } from "./ui/badge";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
 import { useState, useEffect } from "react";
 import { getPrompts, toggleFavorite, listenForPromptUpdates, SanityPrompt } from "@/sanity/lib/queries";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
 
 // Use the SanityPrompt type from our queries
 type Prompt = SanityPrompt;
@@ -15,13 +11,41 @@ type Prompt = SanityPrompt;
 const categories = ["All", "Marketing", "Coding", "Writing", "Business", "Design"] as const;
 type Category = typeof categories[number];
 
-export default function PromptGrid() {
+interface PromptGridProps {
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
+  onPromptAdded: (prompt: SanityPrompt) => void;
+}
+
+export default function PromptGrid({ searchQuery, onSearchChange, onPromptAdded }: PromptGridProps) {
   const [selectedCategory, setSelectedCategory] = useState<Category>("All");
-  const [searchQuery, setSearchQuery] = useState("");
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  
+  // Handle new prompt addition from parent
+  useEffect(() => {
+    const handlePromptAdded = async () => {
+      try {
+        const data = await getPrompts();
+        setPrompts(data.map(formatPromptDate));
+      } catch (error) {
+        console.error('Error refreshing prompts:', error);
+        toast.error('Failed to refresh prompts');
+      }
+    };
+    
+    // Set up the handler
+    const cleanup = () => {
+      // Cleanup if needed
+    };
+    
+    // Call the handler immediately in case we missed any updates
+    handlePromptAdded();
+    
+    return cleanup;
+  }, [onPromptAdded]); // This effect runs when onPromptAdded changes
 
   // Format date helper function
   const formatPromptDate = (prompt: SanityPrompt): SanityPrompt => ({
@@ -99,9 +123,19 @@ export default function PromptGrid() {
   // Filter prompts based on selected category and search query
   const filteredPrompts = prompts.filter((prompt) => {
     const matchesCategory = selectedCategory === "All" || prompt.category === selectedCategory;
-    const matchesSearch = prompt.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         prompt.prompt.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         prompt.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    // If search query is empty, only filter by category
+    if (!searchQuery.trim()) {
+      return matchesCategory;
+    }
+    
+    // Otherwise, filter by both category and search query
+    const query = searchQuery.toLowerCase();
+    const matchesSearch = 
+      prompt.title?.toLowerCase().includes(query) ||
+      prompt.prompt?.toLowerCase().includes(query) ||
+      prompt.tags?.some(tag => tag.toLowerCase().includes(query));
+      
     return matchesCategory && matchesSearch;
   });
 
@@ -109,9 +143,10 @@ export default function PromptGrid() {
     setSelectedCategory(category);
   };
 
+  // Handle prompt added from parent
   const handlePromptAdded = (newPrompt: Prompt) => {
-    // Add the new prompt to the beginning of the list
-    setPrompts(prevPrompts => [formatPromptDate(newPrompt), ...prevPrompts]);
+    // The parent component will handle the refresh
+    onPromptAdded?.(newPrompt);
   };
 
   const handleToggleFavorite = async (id: string) => {
@@ -172,6 +207,7 @@ export default function PromptGrid() {
     <section className="max-w-5xl mx-auto px-4 py-6">
       {/* Category Filter */}
       <div className="mb-6">
+        <h2 className="text-2xl font-bold mb-4">Prompts</h2>
         <div className="flex gap-2 flex-wrap">
           {categories.map((category) => (
             <Badge
@@ -183,21 +219,6 @@ export default function PromptGrid() {
               {category}
             </Badge>
           ))}
-        </div>
-      </div>
-      
-      {/* Search Input */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <h2 className="text-2xl font-bold">Prompts</h2>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
-          <Input
-            type="search"
-            placeholder="Search prompts..."
-            className="w-full sm:w-[200px] lg:w-[300px]"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          <AddPromptDialog onPromptAdded={handlePromptAdded} />
         </div>
       </div>
       

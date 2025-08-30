@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -34,14 +34,23 @@ export function PromptDetailDialog({
   onToggleFavorite
 }: PromptDetailDialogProps) {
   const [favorite, setFavorite] = useState(isFavorite);
+  const contentEditableRef = useRef<HTMLDivElement>(null);
 
   // Sync favorite state when prop changes
   useEffect(() => {
     setFavorite(isFavorite);
   }, [isFavorite]);
 
+  // Set initial content when dialog opens
+  useEffect(() => {
+    if (open && contentEditableRef.current) {
+      contentEditableRef.current.textContent = prompt;
+    }
+  }, [open, prompt]);
+
   const handleCopy = () => {
-    navigator.clipboard.writeText(prompt);
+    const text = contentEditableRef.current?.textContent || '';
+    navigator.clipboard.writeText(text);
     toast.success("Prompt copied to clipboard!", {
       duration: 2000,
     });
@@ -121,10 +130,15 @@ export function PromptDetailDialog({
               <Type className="w-4 h-4 text-muted-foreground" />
               <h3 className="font-medium">Prompt</h3>
             </div>
-            <div className="bg-muted/30 rounded-lg p-4 border-l-4 border-primary/50">
-              <p className="font-mono leading-relaxed text-sm whitespace-pre-wrap">
-                {prompt}
-              </p>
+            <div className="bg-muted/30 rounded-lg p-4 border-l-4 border-primary/50 max-h-[300px] overflow-y-auto">
+              <div 
+                ref={contentEditableRef}
+                className="font-mono leading-relaxed text-sm whitespace-pre-wrap outline-none focus:ring-1 focus:ring-primary/50 focus:ring-offset-1 rounded p-1 -m-1 transition-colors text-left"
+                contentEditable
+                dir="ltr"
+                suppressContentEditableWarning={true}
+                dangerouslySetInnerHTML={{ __html: prompt }}
+              />
             </div>
           </div>
 
