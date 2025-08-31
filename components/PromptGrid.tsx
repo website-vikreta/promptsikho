@@ -223,7 +223,7 @@ export default function PromptGrid({ searchQuery, onSearchChange, onPromptAdded 
       </div>
       
       {/* Prompts Grid */}
-      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div className="flex flex-col md:grid md:grid-cols-2 xl:grid-cols-3 gap-4">
         {filteredPrompts.map((prompt) => (
           <PromptCard
             key={prompt._id}
