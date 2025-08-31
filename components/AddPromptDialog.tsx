@@ -359,7 +359,7 @@ export function AddPromptDialog({ onPromptAdded }: AddPromptDialogProps) {
             </Button>
             <Button 
               type="submit" 
-              variant="primary"
+              variant="default"
               disabled={!isFormValid || isSubmitting}
               className="text-white min-w-[120px] px-6 py-2 text-sm font-medium bg-primary hover:bg-primary/90 focus:ring-2 focus:ring-offset-2 focus:ring-primary/50"
             >
