@@ -293,7 +293,7 @@ export function AddPromptDialog({ onPromptAdded }: AddPromptDialogProps) {
                       handleAddTag();
                     }
                   }}
-                  className={`${errors.tags ? 'border-red-500' : ''} focus-visible:ring-2 focus-visible:ring-blue-500`}
+                  className={`${errors.tags ? 'border-red-500' : ''} focus-visible:ring-2 focus-visible:ring-primary`}
                   disabled={isSubmitting}
                   aria-invalid={!!errors.tags}
                   aria-describedby={errors.tags ? 'tags-error' : undefined}
@@ -359,8 +359,9 @@ export function AddPromptDialog({ onPromptAdded }: AddPromptDialogProps) {
             </Button>
             <Button 
               type="submit" 
+              variant="primary"
               disabled={!isFormValid || isSubmitting}
-              className="min-w-[120px] px-6 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="text-white min-w-[120px] px-6 py-2 text-sm font-medium bg-primary hover:bg-primary/90 focus:ring-2 focus:ring-offset-2 focus:ring-primary/50"
             >
               {isSubmitting ? (
                 <>
